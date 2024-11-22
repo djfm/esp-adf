@@ -327,7 +327,15 @@ void app_main(void)
         (void*) MIDDLE_BUTTON_GPIO
     );
 
-    xTaskCreate(button_task, "button_task", 2048, NULL, 10, NULL);
+    xTaskCreate(
+        button_task,
+        "button_task",
+        4096,
+        NULL,
+        10,
+        NULL
+    );
+
     /**
      * End of FM's CODE ↑↑↑↑
      */

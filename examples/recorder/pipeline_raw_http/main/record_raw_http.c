@@ -96,6 +96,27 @@ static void button_task(void *arg)
             ESP_LOGI(TAG, "Button queue received something!!!!!");
             ESP_LOGI(TAG, "Button %d, value %d", evt.gpio_num, evt.gpio_value);
             // xEventGroupSetBits(EXIT_FLAG, DEMO_EXIT_BIT);
+
+            if (evt.gpio_num == MIDDLE_BUTTON_GPIO && evt.gpio_value == 0) {
+                ESP_LOGI(TAG, "Middle button pressed, starting to record...");
+                /*
+                 * There is no effect when follow APIs output warning message on the first time record
+                 */
+                audio_pipeline_stop(pipeline);
+                audio_pipeline_wait_for_stop(pipeline);
+                audio_pipeline_reset_ringbuffer(pipeline);
+                audio_pipeline_reset_elements(pipeline);
+                audio_pipeline_terminate(pipeline);
+
+                audio_element_set_uri(http_stream_writer, CONFIG_SERVER_URI);
+                audio_pipeline_run(pipeline);
+            } else if (evt.gpio_num == MIDDLE_BUTTON_GPIO && evt.gpio_value == 1) {
+                ESP_LOGI(TAG, "Middle button released, stopping recording.");
+                /*
+                 * Set the i2s_stream_reader ringbuffer is done to flush the buffering voice data.
+                 */
+                audio_element_set_ringbuf_done(i2s_stream_reader);
+            }
         }
     }
 }

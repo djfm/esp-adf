@@ -37,6 +37,18 @@
 #include "tcpip_adapter.h"
 #endif
 
+
+/**
+ * FM's CODE        ↓↓↓↓
+ */
+
+#define ESP_INTR_FLAG_DEFAULT 0
+#include <driver/gpio.h>
+
+/**
+ * End of FM's CODE ↑↑↑↑
+ */
+
 static const char *TAG = "REC_RAW_HTTP";
 
 
@@ -50,6 +62,47 @@ static EventGroupHandle_t EXIT_FLAG;
 audio_pipeline_handle_t pipeline;
 audio_element_handle_t i2s_stream_reader;
 audio_element_handle_t http_stream_writer;
+
+/**
+ * FM's CODE        ↓↓↓↓
+ */
+
+#define MIDDLE_BUTTON_GPIO GPIO_NUM_12
+
+static QueueHandle_t gpio_evt_queue = NULL;
+
+typedef struct {
+    uint8_t gpio_num;
+    uint8_t gpio_value;
+} button_event_t;
+
+static void IRAM_ATTR button_isr_handler(void *arg)
+{
+    uint8_t gpio_num = (uint8_t)arg;
+
+    button_event_t evt = {
+        .gpio_num = gpio_num,
+        .gpio_value = gpio_get_level(gpio_num)
+    };
+
+    xQueueSendFromISR(gpio_evt_queue, &evt, NULL);
+}
+
+static void button_task(void *arg)
+{
+    button_event_t evt;
+    for(;;) {
+        if(xQueueReceive(gpio_evt_queue, &evt, portMAX_DELAY)) {
+            ESP_LOGI(TAG, "Button queue received something!!!!!");
+            ESP_LOGI(TAG, "Button %d, value %d", evt.gpio_num, evt.gpio_value);
+            // xEventGroupSetBits(EXIT_FLAG, DEMO_EXIT_BIT);
+        }
+    }
+}
+
+/**
+ * End of FM's CODE ↑↑↑↑
+ */
 
 esp_err_t _http_stream_event_handle(http_stream_event_msg_t *msg)
 {
@@ -228,6 +281,35 @@ void app_main(void)
     periph_service_handle_t input_ser = input_key_service_create(&input_cfg);
     input_key_service_add_key(input_ser, input_key_info, INPUT_KEY_NUM);
     periph_service_set_callback(input_ser, input_key_service_cb, (void *)http_stream_writer);
+
+
+    /**
+     * FM's CODE        ↓↓↓↓
+     */
+    ESP_LOGI(TAG, "Setting up button interrupts...");
+
+    gpio_evt_queue = xQueueCreate(10, sizeof(button_event_t));
+
+    gpio_config_t io_conf;
+    io_conf.intr_type = GPIO_INTR_ANYEDGE;
+    io_conf.pin_bit_mask = (1ULL << MIDDLE_BUTTON_GPIO);
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    gpio_config(&io_conf);
+
+    gpio_uninstall_isr_service();
+    gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+    gpio_isr_handler_add(
+        MIDDLE_BUTTON_GPIO,
+        button_isr_handler,
+        (void*) MIDDLE_BUTTON_GPIO
+    );
+
+    xTaskCreate(button_task, "button_task", 2048, NULL, 10, NULL);
+    /**
+     * End of FM's CODE ↑↑↑↑
+     */
 
     i2s_stream_set_clk(i2s_stream_reader, EXAMPLE_AUDIO_SAMPLE_RATE, EXAMPLE_AUDIO_BITS, EXAMPLE_AUDIO_CHANNELS);
 

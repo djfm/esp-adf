@@ -266,7 +266,12 @@ void app_main(void)
 
     ESP_LOGI(TAG, "[ 2 ] Start codec chip");
     audio_board_handle_t board_handle = audio_board_init();
-    audio_hal_ctrl_codec(board_handle->audio_hal, AUDIO_HAL_CODEC_MODE_ENCODE, AUDIO_HAL_CTRL_START);
+    audio_hal_ctrl_codec(
+        board_handle->audio_hal,
+        AUDIO_HAL_CODEC_MODE_ENCODE,
+        AUDIO_HAL_CTRL_START
+    );
+
 
     ESP_LOGI(TAG, "[3.0] Create audio pipeline for recording");
     audio_pipeline_cfg_t pipeline_cfg = DEFAULT_AUDIO_PIPELINE_CONFIG();
@@ -281,7 +286,14 @@ void app_main(void)
     http_stream_writer = http_stream_init(&http_cfg);
 
     ESP_LOGI(TAG, "[3.2] Create i2s stream to read audio data from codec chip");
-    i2s_stream_cfg_t i2s_cfg = I2S_STREAM_CFG_DEFAULT_WITH_TYLE_AND_CH(CODEC_ADC_I2S_PORT, 44100, 16, AUDIO_STREAM_READER, 1);
+    i2s_stream_cfg_t i2s_cfg = I2S_STREAM_CFG_DEFAULT_WITH_TYLE_AND_CH(
+        CODEC_ADC_I2S_PORT,
+        44100,
+        16,
+        AUDIO_STREAM_READER,
+        1
+    );
+
     i2s_cfg.type = AUDIO_STREAM_READER;
     i2s_cfg.out_rb_size = 16 * 1024; // Increase buffer to avoid missing data in bad network conditions
     i2s_stream_reader = i2s_stream_init(&i2s_cfg);

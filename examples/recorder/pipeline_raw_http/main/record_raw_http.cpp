@@ -178,6 +178,7 @@ esp_err_t _http_stream_event_handle(http_stream_event_msg_t *msg)
         memset(dat, 0, sizeof(dat));
         snprintf(dat, sizeof(dat), "%d", EXAMPLE_AUDIO_CHANNELS);
         esp_http_client_set_header(http, "x-audio-channel", dat);
+        esp_http_client_set_header(http, "content-type", "audio/wav");
         total_write = 0;
         return ESP_OK;
     }
